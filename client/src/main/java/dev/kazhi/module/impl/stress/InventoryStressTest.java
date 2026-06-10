@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -19,9 +20,10 @@ public class InventoryStressTest extends StressModule {
         Mixed
     }
 
-    public int packetsPerSecond = 500;
+    public int packetsPerSecond = 200;
     public Mode mode = Mode.Mixed;
     public boolean fillInventory = true;
+    public boolean heavyFill = false;
     public boolean rawPackets = true;
 
     private int slotCursor;
@@ -47,7 +49,7 @@ public class InventoryStressTest extends StressModule {
         pickupSlotA = StressSlotUtils.MAIN_START;
         pickupSlotB = StressSlotUtils.MAIN_END;
 
-        if (fillInventory && player().isCreative()) {
+        if (fillInventory && hasCreativeBuild()) {
             fillInventorySlots();
         }
 
@@ -87,10 +89,7 @@ public class InventoryStressTest extends StressModule {
 
     private void sendRawClick(int slotId, int button, ClickType action) {
         AbstractContainerMenu handler = player().containerMenu;
-        ItemStack carried = handler.getCarried().isEmpty()
-            ? StressPayload.copyStressShulker()
-            : handler.getCarried().copy();
-
+        ItemStack carried = handler.getCarried().isEmpty() ? ItemStack.EMPTY : handler.getCarried().copy();
         connection().send(StressPackets.containerClick(handler, slotId, button, action, carried));
     }
 
@@ -130,10 +129,14 @@ public class InventoryStressTest extends StressModule {
     }
 
     private void fillInventorySlots() {
-        ItemStack stack = StressPayload.copyStressShulker();
+        ItemStack stack = heavyFill
+            ? StressPayload.copyStressShulker()
+            : new ItemStack(Items.COBBLESTONE, 64);
         for (int i = StressSlotUtils.HOTBAR_START; i <= StressSlotUtils.MAIN_END; i++) {
-            int slotId = StressSlotUtils.survivalSlotId(i);
-            connection().send(new ServerboundSetCreativeModeSlotPacket(slotId, stack.copy()));
+            int packetSlot = StressSlotUtils.creativePacketSlot(i);
+            ItemStack copy = stack.copy();
+            player().getInventory().setItem(i, copy);
+            connection().send(new ServerboundSetCreativeModeSlotPacket(packetSlot, copy));
         }
     }
 }

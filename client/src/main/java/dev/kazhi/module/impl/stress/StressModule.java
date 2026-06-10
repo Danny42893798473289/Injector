@@ -1,5 +1,6 @@
 package dev.kazhi.module.impl.stress;
 
+import dev.kazhi.build.BuildAccess;
 import dev.kazhi.module.Category;
 import dev.kazhi.module.Module;
 import dev.kazhi.rt.KazhiLog;
@@ -31,11 +32,15 @@ public abstract class StressModule extends Module {
     }
 
     protected boolean requireCreative() {
-        if (player() == null || !player().isCreative()) {
+        if (player() == null || !BuildAccess.hasCreativeBuild(player())) {
             fail("Creative mode required.");
             return false;
         }
         return true;
+    }
+
+    protected boolean hasCreativeBuild() {
+        return player() != null && BuildAccess.hasCreativeBuild(player());
     }
 
     protected void info(String msg) {

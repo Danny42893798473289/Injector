@@ -5,6 +5,8 @@ import dev.kazhi.module.impl.stress.ShulkerStressTest;
 import net.minecraft.world.item.ItemStack;
 
 public final class StressPayload {
+    private static ItemStack cachedDefault;
+
     private StressPayload() {}
 
     public static ItemStack copyStressShulker() {
@@ -12,6 +14,13 @@ public final class StressPayload {
             .get("Shulker Stress")
             .filter(m -> m instanceof ShulkerStressTest)
             .map(m -> ((ShulkerStressTest) m).copyHeavyShulker())
-            .orElseGet(StressShulkerStacks::buildDefault);
+            .orElseGet(StressPayload::cachedDefaultShulker);
+    }
+
+    private static ItemStack cachedDefaultShulker() {
+        if (cachedDefault == null) {
+            cachedDefault = StressShulkerStacks.buildDefault();
+        }
+        return cachedDefault.copy();
     }
 }

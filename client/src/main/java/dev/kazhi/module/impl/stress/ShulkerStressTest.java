@@ -1,6 +1,10 @@
 package dev.kazhi.module.impl.stress;
 
 import dev.kazhi.stressutil.StressShulkerStacks;
+import dev.kazhi.stressutil.StressSlotUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
 import net.minecraft.world.item.ItemStack;
 
@@ -39,17 +43,23 @@ public class ShulkerStressTest extends StressModule {
         if (player() == null || MC.level == null || connection() == null) {
             return;
         }
-        if (!player().isCreative()) {
+        if (!hasCreativeBuild()) {
             fail("Creative mode required.");
             return;
         }
 
-        ItemStack stack = getHeavyShulker();
-        int slot = 36 + player().getInventory().getSelectedSlot();
+        ItemStack stack = getHeavyShulker().copy();
+        int hotbarSlot = player().getInventory().getSelectedSlot();
+        int packetSlot = StressSlotUtils.creativePacketSlot(hotbarSlot);
 
         for (int i = 0; i < perTick; i++) {
-            connection().send(new ServerboundSetCreativeModeSlotPacket(slot, stack.copy()));
-            player().drop(true);
+            player().getInventory().setItem(hotbarSlot, stack.copy());
+            connection().send(new ServerboundSetCreativeModeSlotPacket(packetSlot, stack));
+            connection().send(new ServerboundPlayerActionPacket(
+                ServerboundPlayerActionPacket.Action.DROP_ALL_ITEMS,
+                BlockPos.ZERO,
+                Direction.DOWN
+            ));
         }
     }
 

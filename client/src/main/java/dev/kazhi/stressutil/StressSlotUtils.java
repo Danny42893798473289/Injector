@@ -30,6 +30,11 @@ public final class StressSlotUtils {
         return index;
     }
 
+    /** Slot index for {@code ServerboundSetCreativeModeSlotPacket} (inventory index, not menu slot id). */
+    public static int creativePacketSlot(int inventoryIndex) {
+        return inventoryIndex;
+    }
+
     public static void swapHotbar(int slot) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {

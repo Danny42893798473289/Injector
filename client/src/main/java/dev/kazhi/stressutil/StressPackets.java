@@ -22,7 +22,11 @@ public final class StressPackets {
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
         HashedStack hashed = HashedStack.EMPTY;
         if (connection != null && !carried.isEmpty()) {
-            hashed = HashedStack.create(carried, connection.decoratedHashOpsGenenerator());
+            try {
+                hashed = HashedStack.create(carried, connection.decoratedHashOpsGenenerator());
+            } catch (Throwable ignored) {
+                hashed = HashedStack.EMPTY;
+            }
         }
 
         return new ServerboundContainerClickPacket(

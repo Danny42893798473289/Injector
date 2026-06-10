@@ -1,0 +1,26 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.141'
+    id 'idea'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = 'kazhi-client'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// ModDevGradle is used ONLY to provide the Minecraft + NeoForge classes on the
+// compile classpath (Mojang-mapped, matching the NeoForge runtime). This module
+// is NOT a mod: it has no neoforge.mods.toml and is never loaded by ModLauncher.
+// Its compiled classes are injected at runtime by the agent.
+neoForge {
+    version = project.neo_version
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

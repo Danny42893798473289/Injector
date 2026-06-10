@@ -1,0 +1,81 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = mod_group_id
+version = mod_version
+
+base {
+    archivesName = 'kazhi-injector'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+application {
+    mainClass = 'dev.kazhi.injector.InjectorMain'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.addAll(['--add-modules', 'jdk.attach'])
+}
+
+tasks.withType(JavaExec).configureEach {
+    jvmArgs('--add-modules', 'jdk.attach')
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'dev.kazhi.injector.InjectorMain'
+    }
+}
+
+tasks.register('dist', Copy) {
+    dependsOn jar, ':agent:jar', ':agent:copyClientJar', ':client:jar'
+    into layout.buildDirectory.dir('dist')
+    from(tasks.jar)
+    from(project(':agent').tasks.jar)
+    from(project(':client').tasks.jar)
+    rename { String name ->
+        if (name.startsWith('kazhi-client') && name.contains('-sources')) return name
+        name
+    }
+    include 'kazhi-*.jar'
+}
+
+tasks.named('build') {
+    dependsOn 'dist'
+}
+
+// Builds a native Windows .exe launcher (with a bundled Java runtime) that
+// auto-injects on launch. Output: injector/build/exe/KazhiInjector/KazhiInjector.exe
+tasks.register('jpackageExe', Exec) {
+    dependsOn 'dist'
+    group = 'distribution'
+    description = 'Create a double-click KazhiInjector.exe that auto-injects'
+
+    def distDir = layout.buildDirectory.dir('dist').get().asFile
+    def outDir = layout.buildDirectory.dir('exe').get().asFile
+    def javaHome = System.getProperty('java.home')
+    def jpackage = "${javaHome}/bin/jpackage"
+
+    doFirst {
+        outDir.deleteDir()
+        outDir.mkdirs()
+    }
+
+    commandLine jpackage,
+            '--type', 'app-image',
+            '--name', 'KazhiInjector',
+            '--input', distDir.absolutePath,
+            '--main-jar', "kazhi-injector-${mod_version}.jar",
+            '--main-class', 'dev.kazhi.injector.InjectorMain',
+            '--add-modules', 'jdk.attach',
+            '--java-options', '--add-modules=jdk.attach',
+            '--win-console',
+            '--dest', outDir.absolutePath
+
+    doLast {
+        println "EXE created at: ${outDir}/KazhiInjector/KazhiInjector.exe"
+    }
+}

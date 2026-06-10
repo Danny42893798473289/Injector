@@ -1,0 +1,16 @@
+plugins {
+    id 'base'
+}
+
+group = mod_group_id
+version = mod_version
+
+tasks.register('buildAll') {
+    dependsOn ':client:build', ':agent:build', ':injector:jpackageExe'
+    group = 'build'
+    description = 'Build client, agent, injector dist, and KazhiInjector.exe'
+}
+
+tasks.named('build') {
+    dependsOn 'buildAll'
+}

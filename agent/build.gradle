@@ -1,0 +1,47 @@
+plugins {
+    id 'java'
+}
+
+group = mod_group_id
+version = mod_version
+
+base {
+    archivesName = 'kazhi-agent'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.7.1'
+    implementation 'org.ow2.asm:asm-commons:9.7.1'
+}
+
+jar {
+    manifest {
+        attributes(
+                'Agent-Class': 'dev.kazhi.agent.KazhiAgent',
+                'Can-Redefine-Classes': 'true',
+                'Can-Retransform-Classes': 'true'
+        )
+    }
+    // Fat jar: bundle ASM so the agent is self-contained when attached.
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Agent resolves kazhi-client*.jar from the same folder at attach time.
+tasks.register('copyClientJar', Copy) {
+    dependsOn ':client:jar'
+    from project(':client').tasks.jar
+    into layout.buildDirectory.dir('libs')
+}
+
+tasks.named('jar').configure {
+    finalizedBy 'copyClientJar'
+}

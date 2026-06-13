@@ -176,8 +176,14 @@ public final class ModuleManager {
         ClockHudModule.tickHud();
         BlockCountHudModule.tickHud();
         for (Module module : modules) {
-            if (module.isEnabled()) {
+            if (!module.isEnabled()) {
+                continue;
+            }
+            try {
                 module.onTick();
+            } catch (Throwable t) {
+                dev.kazhi.rt.KazhiLog.error(module.getName() + " tick failed", t);
+                module.setEnabled(false);
             }
         }
     }

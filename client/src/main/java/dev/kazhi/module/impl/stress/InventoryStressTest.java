@@ -3,8 +3,7 @@ package dev.kazhi.module.impl.stress;
 import dev.kazhi.stressutil.StressPayload;
 import dev.kazhi.stressutil.StressSlotUtils;
 import dev.kazhi.stressutil.StressPackets;
-import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
-import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
+import dev.kazhi.stressutil.StressCreative;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
@@ -20,16 +19,17 @@ public class InventoryStressTest extends StressModule {
         Mixed
     }
 
-    public int packetsPerSecond = 200;
+    public int packetsPerSecond = 80;
     public Mode mode = Mode.Mixed;
-    public boolean fillInventory = true;
+    public boolean fillInventory = false;
     public boolean heavyFill = false;
-    public boolean rawPackets = true;
+    public boolean rawPackets = false;
 
     private int slotCursor;
     private int actionCursor;
     private int pickupSlotA;
     private int pickupSlotB;
+    private boolean pendingFill;
 
     public InventoryStressTest() {
         super("Inventory Stress", "Spams inventory click packets to stress-test server slot handling.");
@@ -48,18 +48,26 @@ public class InventoryStressTest extends StressModule {
         actionCursor = 0;
         pickupSlotA = StressSlotUtils.MAIN_START;
         pickupSlotB = StressSlotUtils.MAIN_END;
+        pendingFill = fillInventory && hasCreativeBuild();
 
-        if (fillInventory && hasCreativeBuild()) {
-            fillInventorySlots();
-        }
-
-        info("Inventory stress running (~" + packetsPerSecond + " packets/s).");
+        info("Inventory stress armed (~" + packetsPerSecond + " packets/s). Close the menu to start.");
     }
 
     @Override
     public void onTick() {
-        if (player() == null || MC.level == null || connection() == null) {
+        if (!shouldRunStressTick()) {
             return;
+        }
+
+        if (pendingFill) {
+            pendingFill = false;
+            try {
+                fillInventorySlots();
+            } catch (Throwable t) {
+                fail("Inventory fill failed.");
+                dev.kazhi.rt.KazhiLog.error("Inventory stress fill failed", t);
+                return;
+            }
         }
 
         for (int i = 0; i < packetsPerTick(packetsPerSecond); i++) {
@@ -69,7 +77,7 @@ public class InventoryStressTest extends StressModule {
 
     private void spamClick() {
         int slotIndex = nextSlotIndex();
-        int slotId = StressSlotUtils.survivalSlotId(slotIndex);
+        int slotId = StressSlotUtils.menuSlotId(slotIndex);
 
         ClickType action = nextAction();
         int button = action == ClickType.SWAP ? player().getInventory().getSelectedSlot() : 0;
@@ -133,10 +141,7 @@ public class InventoryStressTest extends StressModule {
             ? StressPayload.copyStressShulker()
             : new ItemStack(Items.COBBLESTONE, 64);
         for (int i = StressSlotUtils.HOTBAR_START; i <= StressSlotUtils.MAIN_END; i++) {
-            int packetSlot = StressSlotUtils.creativePacketSlot(i);
-            ItemStack copy = stack.copy();
-            player().getInventory().setItem(i, copy);
-            connection().send(new ServerboundSetCreativeModeSlotPacket(packetSlot, copy));
+            StressCreative.giveInventorySlot(player(), i, stack);
         }
     }
 }

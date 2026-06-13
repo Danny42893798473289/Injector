@@ -1,6 +1,12 @@
 ### Gradle ###
 .gradle
 build/
+!injector/build/
+injector/build/*
+!injector/build/dist/
+!injector/build/dist/**
+!injector/build/exe/
+!injector/build/exe/**
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/**/build/
 

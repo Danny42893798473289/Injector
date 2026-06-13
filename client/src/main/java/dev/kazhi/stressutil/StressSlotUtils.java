@@ -30,9 +30,9 @@ public final class StressSlotUtils {
         return index;
     }
 
-    /** Slot index for {@code ServerboundSetCreativeModeSlotPacket} (inventory index, not menu slot id). */
-    public static int creativePacketSlot(int inventoryIndex) {
-        return inventoryIndex;
+    /** Menu slot id for creative packets and player inventory clicks (hotbar index 0 -> 36). */
+    public static int menuSlotId(int inventoryIndex) {
+        return survivalSlotId(inventoryIndex);
     }
 
     public static void swapHotbar(int slot) {

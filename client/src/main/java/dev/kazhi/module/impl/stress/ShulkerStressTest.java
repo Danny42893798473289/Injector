@@ -1,18 +1,15 @@
 package dev.kazhi.module.impl.stress;
 
+import dev.kazhi.rt.KazhiLog;
+import dev.kazhi.stressutil.StressCreative;
 import dev.kazhi.stressutil.StressShulkerStacks;
-import dev.kazhi.stressutil.StressSlotUtils;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
-import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
 import net.minecraft.world.item.ItemStack;
 
 public class ShulkerStressTest extends StressModule {
-    public int perTick = 10;
-    public int loreLines = StressShulkerStacks.DEFAULT_LORE_LINES;
-    public int lineLength = StressShulkerStacks.DEFAULT_LINE_LENGTH;
-    public boolean fillShulker = StressShulkerStacks.DEFAULT_FILL_SHULKER;
+    public int perTick = 5;
+    public int loreLines = 16;
+    public int lineLength = 64;
+    public boolean fillShulker = false;
 
     private ItemStack heavyShulker;
     private int stackSignature;
@@ -29,8 +26,17 @@ public class ShulkerStressTest extends StressModule {
         if (!requireCreative() || !requireConnection()) {
             return;
         }
+
         invalidateStack();
-        info("Stress test running. Watch TPS/MSPT on the server console.");
+        try {
+            getHeavyShulker();
+        } catch (Throwable t) {
+            fail("Failed to build stress shulker: " + t.getClass().getSimpleName());
+            KazhiLog.error("Shulker stress payload build failed", t);
+            return;
+        }
+
+        info("Stress test running. Close the menu and watch for dropped shulkers / server TPS.");
     }
 
     @Override
@@ -40,7 +46,7 @@ public class ShulkerStressTest extends StressModule {
 
     @Override
     public void onTick() {
-        if (player() == null || MC.level == null || connection() == null) {
+        if (!shouldRunStressTick()) {
             return;
         }
         if (!hasCreativeBuild()) {
@@ -48,18 +54,19 @@ public class ShulkerStressTest extends StressModule {
             return;
         }
 
-        ItemStack stack = getHeavyShulker().copy();
-        int hotbarSlot = player().getInventory().getSelectedSlot();
-        int packetSlot = StressSlotUtils.creativePacketSlot(hotbarSlot);
+        ItemStack stack;
+        try {
+            stack = getHeavyShulker().copy();
+        } catch (Throwable t) {
+            fail("Failed to build stress shulker.");
+            KazhiLog.error("Shulker stress payload build failed", t);
+            return;
+        }
 
+        int hotbarSlot = player().getInventory().getSelectedSlot();
         for (int i = 0; i < perTick; i++) {
-            player().getInventory().setItem(hotbarSlot, stack.copy());
-            connection().send(new ServerboundSetCreativeModeSlotPacket(packetSlot, stack));
-            connection().send(new ServerboundPlayerActionPacket(
-                ServerboundPlayerActionPacket.Action.DROP_ALL_ITEMS,
-                BlockPos.ZERO,
-                Direction.DOWN
-            ));
+            StressCreative.giveHotbar(player(), hotbarSlot, stack);
+            StressCreative.dropHotbarStack(player(), hotbarSlot);
         }
     }
 

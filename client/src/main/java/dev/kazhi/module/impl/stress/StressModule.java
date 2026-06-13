@@ -43,6 +43,13 @@ public abstract class StressModule extends Module {
         return player() != null && BuildAccess.hasCreativeBuild(player());
     }
 
+    protected boolean shouldRunStressTick() {
+        if (player() == null || MC.level == null || connection() == null) {
+            return false;
+        }
+        return MC.screen == null;
+    }
+
     protected void info(String msg) {
         KazhiLog.log("[Stress] " + getName() + ": " + msg);
     }
